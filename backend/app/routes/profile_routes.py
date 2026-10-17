@@ -1,6 +1,6 @@
 import os
 from uuid import uuid4
-from fastapi import APIRouter, Request, Form, UploadFile, File
+from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from app.database import run_query
@@ -49,15 +49,25 @@ def my_profile(request: Request):
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("profile.html", {"request": request, "user": user, "profile": user})
 
-
 @router.get("/profile/{user_id}", response_class=HTMLResponse)
 def profile_by_id(request: Request, user_id: int):
     user = get_user_from_session(request)
     if not user:
         return RedirectResponse("/login", status_code=302)
-    profile = run_query("SELECT * FROM users WHERE id=%s", (user_id,), fetchone=True)
-    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "profile": profile})
 
+    # IDOR fix: only the owner or an admin may view this profile.
+    is_owner = (user_id == user["id"])
+    is_admin = (user.get("role") == "admin")
+    if not is_owner and not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to view this profile",
+        )
+
+    profile = run_query("SELECT * FROM users WHERE id=%s", (user_id,), fetchone=True)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "profile": profile})
 
 @router.post("/profile/update")
 def update_profile(
