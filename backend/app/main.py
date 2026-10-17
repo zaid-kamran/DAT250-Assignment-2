@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
 from app.routes import (
     auth_routes,
     profile_routes,
@@ -12,6 +15,10 @@ from app.routes import (
 )
 
 app = FastAPI(title="DAT250 SecureApp", debug=False)
+
+# Rate limiting setup
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
