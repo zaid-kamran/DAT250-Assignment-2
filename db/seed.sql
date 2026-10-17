@@ -69,3 +69,9 @@ INSERT INTO audit_logs (actor_user_id, action, details) VALUES
 (1, 'seed', 'Initial seed data imported'),
 (2, 'grade_publish', 'Published grades for assignment 1'),
 (3, 'message_send', 'Sent onboarding messages');
+
+-- Re-sync SERIAL counters after inserting rows with explicit IDs.
+-- Without this, the next INSERT reuses id=1 and /register crashes (duplicate key).
+SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX(id) FROM users));
+SELECT setval(pg_get_serial_sequence('courses', 'id'), (SELECT MAX(id) FROM courses));
+SELECT setval(pg_get_serial_sequence('assignments', 'id'), (SELECT MAX(id) FROM assignments));
