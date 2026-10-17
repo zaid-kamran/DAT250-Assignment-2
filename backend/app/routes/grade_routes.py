@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from app.database import run_query
@@ -45,4 +45,16 @@ def grade_detail(request: Request, grade_id: int):
         (grade_id,),
         fetchone=True,
     )
+
+    # IDOR fix: check if the grade exists
+    if not grade:
+        raise HTTPException(status_code=404, detail="Grade not found")
+
+    # IDOR fix: ensure the grade belongs to the logged-in student (or user is admin/teacher)
+    if grade["student_id"] != user["id"] and user.get("role") not in ("admin", "teacher"):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to view this grade"
+        )
+
     return templates.TemplateResponse("grade_detail.html", {"request": request, "user": user, "grade": grade})

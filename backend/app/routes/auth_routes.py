@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from app.auth import hash_password, verify_password, create_session, clear_session, get_user_from_session
 from app.database import run_query
 from app.email_service import send_reset_email
+from app.limiter import limiter
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -22,6 +23,7 @@ def login_page(request: Request):
 
 
 @router.post("/login", response_class=HTMLResponse)
+@limiter.limit("5/minute")
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
     user = run_query("SELECT * FROM users WHERE email=%s", (email,), fetchone=True)
     if not user:
