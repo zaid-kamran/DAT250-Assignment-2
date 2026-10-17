@@ -50,8 +50,8 @@ def grade_detail(request: Request, grade_id: int):
     if not grade:
         raise HTTPException(status_code=404, detail="Grade not found")
 
-    # IDOR fix: ensure the grade belongs to the logged-in student (or user is admin/teacher)
-    if grade["student_id"] != user["id"] and user.get("role") not in ("admin", "teacher"):
+    # IDOR fix: ensure the grade belongs to the logged-in student (or user is admin/teacher OR TA
+    if grade["student_id"] != user["id"] and user.get("role") not in ("admin", "teacher", "ta"):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to view this grade"
